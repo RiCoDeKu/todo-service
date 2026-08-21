@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import type { Todo } from "../types/todo";
 
 type TodoItemProps = {
@@ -10,8 +11,9 @@ function TodoItem({ todo, onDelete, onComplete }: TodoItemProps) {
   return (
     <>
       <p>タイトル：{todo.title}</p>
-      <p>ステータス：{todo.status === "done" ? "完了" : todo.status}</p>
-      {todo.description && <p>説明：{todo.description}</p>}
+      <button>
+        <Link to={`/todos/${todo.id}`}>詳細</Link>
+      </button>
       <button
         onClick={() => {
           onComplete(todo.id);
