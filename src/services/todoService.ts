@@ -22,15 +22,72 @@ const todos: Todo[] = [
   },
 ];
 
-export function fetchTodos(success: boolean): Promise<Todo[]> {
+export function fetchTodos(): Promise<Todo[]> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(todos);
+      return;
+    }, 1000);
+  });
+}
+
+export async function fetchTodo(id: number): Promise<Todo> {
+  const todos = await fetchTodos();
+  const todo = findTodo(todos, id);
+
+  if (!todo) {
+    throw new Error("Todoが見つかりませんでした");
+  }
+
+  return todo;
+}
+
+export function createTodo(newTodo: NewTodo): Promise<Todo> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const id =
+        todos.length === 0 ? 1 : Math.max(...todos.map((todo) => todo.id)) + 1;
+
+      const todo: Todo = {
+        id,
+        ...newTodo,
+      };
+
+      todos.push(todo);
+
+      resolve(todo);
+    }, 500);
+  });
+}
+
+export function deleteTodo(id: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const index = todos.findIndex((todo) => todo.id === id);
+
+      if (index !== -1) {
+        todos.splice(index, 1);
+      }
+
+      resolve();
+    }, 500);
+  });
+}
+
+export function completeTodo(id: number): Promise<Todo> {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
-      if (success) {
-        resolve(todos);
+      const todo = todos.find((todo) => todo.id === id);
+
+      if (!todo) {
+        reject(new Error("対象IDのTodoが見つかりません"));
         return;
       }
-      reject(new Error("Todoの取得に失敗しました"));
-    }, 1000);
+
+      todo.status = "done";
+
+      resolve(todo);
+    }, 500);
   });
 }
 

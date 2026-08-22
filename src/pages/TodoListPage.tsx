@@ -1,73 +1,80 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import TodoItem from "../components/TodoItem";
-import type { Todo } from "../types/todo";
-import { fetchTodos } from "../services/todoService";
+import {
+  fetchTodos,
+  createTodo,
+  deleteTodo,
+  completeTodo,
+} from "../services/todoService";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 function TodoListPage() {
-  const [todos, setTodos] = useState<Todo[]>([]);
   const [title, setTitle] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+
+  const queryClient = useQueryClient();
+
+  const createTodoMutation = useMutation({
+    mutationFn: createTodo,
+
+    onSuccess: () => {
+      setTitle("");
+
+      queryClient.invalidateQueries({
+        queryKey: ["todos"],
+      });
+    },
+  });
+
+  const deleteTodoMutation = useMutation({
+    mutationFn: deleteTodo,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["todos"],
+      });
+    },
+  });
+
+  const completeTodoMutation = useMutation({
+    mutationFn: completeTodo,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["todos"],
+      });
+    },
+  });
 
   function handleAddTodo() {
     if (title.trim() === "") {
       return;
     }
 
-    setTodos((prevTodos) => {
-      const newId: number =
-        prevTodos.length === 0
-          ? 1
-          : Math.max(...prevTodos.map((todo) => todo.id)) + 1;
-
-      const newTodo: Todo = {
-        id: newId,
-        title,
-        status: "todo",
-      };
-      return [...prevTodos, newTodo];
+    createTodoMutation.mutate({
+      title,
+      status: "todo",
     });
-
-    setTitle("");
   }
 
   function handleDeleteTodo(id: number) {
-    setTodos((prevTodos) => prevTodos.filter((todo) => todo.id !== id));
+    deleteTodoMutation.mutate(id);
   }
 
   function handleCompleteTodo(id: number) {
-    setTodos((prevTodos) =>
-      prevTodos.map((todo) => {
-        if (todo.id === id) {
-          return {
-            ...todo,
-            status: "done",
-          };
-        }
-        return todo;
-      }),
-    );
+    completeTodoMutation.mutate(id);
   }
 
-  useEffect(() => {
-    async function loadTodos() {
-      try {
-        const result = await fetchTodos(true);
-        setTodos(result);
-      } catch (error) {
-        if (error instanceof Error) {
-          setError(error);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadTodos();
-  }, []);
+  const {
+    data: todos,
+    isPending,
+    error,
+  } = useQuery({
+    queryKey: ["todos"],
+    queryFn: fetchTodos,
+    staleTime: 60_000,
+  });
 
   function renderTodos() {
-    if (isLoading) {
+    if (isPending) {
       return <p>読み込み中</p>;
     }
 
@@ -87,6 +94,9 @@ function TodoListPage() {
                 todo={todo}
                 onDelete={handleDeleteTodo}
                 onComplete={handleCompleteTodo}
+                isDisable={
+                  deleteTodoMutation.isPending || completeTodoMutation.isPending
+                }
               />
             ))}
           </>
@@ -98,7 +108,10 @@ function TodoListPage() {
             setTitle(event.target.value);
           }}
         />
-        <button onClick={handleAddTodo}>追加</button>
+        <button onClick={handleAddTodo} disabled={createTodoMutation.isPending}>
+          {createTodoMutation.isPending ? "追加中..." : "追加"}
+        </button>
+        {createTodoMutation.isError && <p>追加に失敗しました</p>}
         <br />
       </>
     );

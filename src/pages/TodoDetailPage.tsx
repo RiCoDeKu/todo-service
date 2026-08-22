@@ -1,43 +1,25 @@
-import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import type { Todo } from "../types/todo";
-import { fetchTodos, findTodo } from "../services/todoService";
+import { fetchTodo } from "../services/todoService";
+import { useQuery } from "@tanstack/react-query";
 
 function TodoDetailPage() {
   const { id } = useParams();
-  const [todo, setTodo] = useState<Todo | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    async function loadTodos() {
-      try {
-        // Initialize each variables.
-        setIsLoading(true);
-        setError(null);
-        setTodo(undefined);
+  const todoId = Number(id);
+  const isValidId = !Number.isNaN(todoId);
 
-        const todoId = Number(id);
-        if (Number.isNaN(todoId)) {
-          throw new Error("不正なパラメータです");
-        }
+  const {
+    data: todo,
+    isPending,
+    error,
+  } = useQuery({
+    queryKey: ["todos", todoId],
+    queryFn: () => fetchTodo(todoId),
+    enabled: isValidId,
+  });
 
-        const todos = await fetchTodos(true);
-        const foundTodo = findTodo(todos, todoId);
-
-        setTodo(foundTodo);
-      } catch (error) {
-        if (error instanceof Error) {
-          setError(error);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadTodos();
-  }, [id]);
-
-  if (isLoading) return <p>読み込み中</p>;
+  if (!isValidId) return <p>不正なIDです</p>;
+  if (isPending) return <p>読み込み中</p>;
   if (error) return <p>エラー: {error.message}</p>;
   if (!todo) return <p>Todoが見つかりません</p>;
   return (
