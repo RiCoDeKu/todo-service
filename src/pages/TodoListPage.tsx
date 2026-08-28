@@ -7,10 +7,14 @@ import {
   deleteTodo,
   completeTodo,
 } from "../services/todoService";
+import TodoFilter from "../components/TodoFilter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAtomValue } from "jotai";
+import { todoFilterAtom } from "../atoms/todoFilter";
 
 function TodoListPage() {
   const [title, setTitle] = useState("");
+  const statusFilter = useAtomValue(todoFilterAtom);
 
   const queryClient = useQueryClient();
 
@@ -73,6 +77,32 @@ function TodoListPage() {
     staleTime: 60_000,
   });
 
+  function filterTodos() {
+    if (!todos) {
+      return null;
+    }
+
+    const filteredTodos =
+      statusFilter === "all"
+        ? todos
+        : todos.filter((todo) => todo.status === statusFilter);
+
+    if (filteredTodos.length === 0) {
+      return <p>該当するTodoはありません</p>;
+    }
+    return filteredTodos.map((todo) => (
+      <TodoItem
+        key={todo.id}
+        todo={todo}
+        onDelete={handleDeleteTodo}
+        onComplete={handleCompleteTodo}
+        isDisable={
+          deleteTodoMutation.isPending || completeTodoMutation.isPending
+        }
+      />
+    ));
+  }
+
   function renderTodos() {
     if (isPending) {
       return <p>読み込み中</p>;
@@ -84,23 +114,8 @@ function TodoListPage() {
 
     return (
       <>
-        {todos.length === 0 ? (
-          <p>todoがありません</p>
-        ) : (
-          <>
-            {todos.map((todo) => (
-              <TodoItem
-                key={todo.id}
-                todo={todo}
-                onDelete={handleDeleteTodo}
-                onComplete={handleCompleteTodo}
-                isDisable={
-                  deleteTodoMutation.isPending || completeTodoMutation.isPending
-                }
-              />
-            ))}
-          </>
-        )}
+        <TodoFilter />
+        {filterTodos()}
         <br />
         <input
           value={title}
