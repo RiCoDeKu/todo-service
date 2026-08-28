@@ -1,5 +1,6 @@
 import { useAtom } from "jotai";
 import { todoFilterAtom } from "../atoms/todoFilter";
+import { ResetTodoFilterButton } from "./ResetTodoFilterButton";
 
 export function TodoFilter() {
   const [statusFilter, setStatusFilter] = useAtom(todoFilterAtom);
@@ -10,7 +11,7 @@ export function TodoFilter() {
         onClick={() => {
           setStatusFilter("all");
         }}
-		disabled={statusFilter === "all"}
+        disabled={statusFilter === "all"}
       >
         すべて
       </button>
@@ -18,7 +19,7 @@ export function TodoFilter() {
         onClick={() => {
           setStatusFilter("todo");
         }}
-		disabled={statusFilter === "todo"}
+        disabled={statusFilter === "todo"}
       >
         未着手
       </button>
@@ -26,7 +27,7 @@ export function TodoFilter() {
         onClick={() => {
           setStatusFilter("doing");
         }}
-		disabled={statusFilter === "doing"}
+        disabled={statusFilter === "doing"}
       >
         進行中
       </button>
@@ -34,10 +35,11 @@ export function TodoFilter() {
         onClick={() => {
           setStatusFilter("done");
         }}
-		disabled={statusFilter === "done"}
+        disabled={statusFilter === "done"}
       >
         完了
-      </button>
+      </button><br/>
+      <ResetTodoFilterButton />
     </div>
   );
 }
