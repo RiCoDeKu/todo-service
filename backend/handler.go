@@ -49,39 +49,45 @@ func createTodo(c *echo.Context) error {
 		return c.JSON(
 			http.StatusBadRequest,
 			ErrorResponse{
-				Message: "title must be 100 characters of less",
+				Message: "title must be 100 characters or less",
 			},
 		)
 	}
 
 	newTodo := Todo{
-		ID: len(todos) + 1,
-		Title: req.Title,
+		ID: nextTodoId,
+		Title: title,
 		Status: "todo",
 	}
 
+	nextTodoId++
+
 	todos = append(todos, newTodo)
 
-	return c.JSON(http.StatusOK, newTodo)
+	return c.JSON(http.StatusCreated, newTodo)
 }
 
 func updateTodo(c *echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Message: "invalid todo id"})
+		return c.JSON(http.StatusBadRequest, 
+			ErrorResponse{Message: "invalid todo id"},
+		)
 	}
 
 	var req UpdateTodoRequest
 
 	if err := c.Bind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Message: "invalid request body"})
+		return c.JSON(http.StatusBadRequest, 
+			ErrorResponse{Message: "invalid request body"},
+		)
 	}
 
-	if req.Status != "todo" && req.Status != "doing" && req.Status != "done" {
+	if req.Status != "todo" && req.Status != "done" {
 		return c.JSON(
 			http.StatusBadRequest,
 			ErrorResponse{
-				Message: "status must be todo or doing or done",
+				Message: "status must be todo or done",
 			},
 		)
 	}
@@ -94,13 +100,17 @@ func updateTodo(c *echo.Context) error {
 		}
 	}
 
-	return c.JSON(http.StatusNotFound, ErrorResponse{Message: "todo not found"})
+	return c.JSON(http.StatusNotFound, 
+		ErrorResponse{Message: "todo not found"},
+	)
 }
 
 func deleteTodo(c *echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Message: "invalid todo id"})
+		return c.JSON(http.StatusBadRequest, 
+			ErrorResponse{Message: "invalid todo id"},
+		)
 	}
 
 	for idx, todo := range todos {
@@ -111,5 +121,7 @@ func deleteTodo(c *echo.Context) error {
 		}
 	}
 
-	return c.JSON(http.StatusNotFound, ErrorResponse{Message: "todo not found"})
+	return c.JSON(http.StatusNotFound, 
+		ErrorResponse{Message: "todo not found"},
+	)
 }

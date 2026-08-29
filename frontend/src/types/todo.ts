@@ -1,4 +1,4 @@
-export type TodoStatus = "todo" | "doing" | "done";
+export type TodoStatus = "todo" | "done";
 
 export type Todo = {
   id: number;
@@ -8,3 +8,11 @@ export type Todo = {
 };
 
 export type NewTodo = Omit<Todo, "id">;
+
+export type CreateTodoRequest = {
+  title: string;
+};
+
+export type UpdateTodoRequest = {
+  status: TodoStatus;
+};

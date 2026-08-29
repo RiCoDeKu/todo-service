@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v5/middleware"
 )
 
 var todos = []Todo{
@@ -17,9 +18,14 @@ var todos = []Todo{
 	},
 }
 
+var nextTodoId = 3
+
 func main() {
 	e := echo.New()
 
+	// CORS Middleware
+	e.Use(middleware.CORS("http://localhost:5173"))
+	
 	e.GET("/todos", getTodos)			// GET: get todos
 	e.GET("/todos/:id", getTodo )		// GET: get todo from specified todo id
 	e.POST("/todos", createTodo)		// POST: post new todo

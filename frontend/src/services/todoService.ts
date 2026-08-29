@@ -1,95 +1,70 @@
 import type { TodoStatus } from "../types/todo";
 import type { Todo } from "../types/todo";
-import type { NewTodo } from "../types/todo";
+import type { CreateTodoRequest } from "../types/todo";
+import type { UpdateTodoRequest } from "../types/todo";
 
-const todos: Todo[] = [
-  {
-    id: 1,
-    title: "TypeScriptを勉強する",
-    status: "done",
-    description: "TypeScript learning is important.",
-  },
-  {
-    id: 2,
-    title: "Reactを勉強する",
-    status: "todo",
-    description: "React learning is important too.",
-  },
-  {
-    id: 3,
-    title: "SQLを勉強する",
-    status: "todo",
-  },
-];
+export const fetchTodos = async (): Promise<Todo[]> => {
+  const response = await fetch("http://localhost:8080/todos");
 
-export function fetchTodos(): Promise<Todo[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(todos);
-      return;
-    }, 1000);
-  });
-}
-
-export async function fetchTodo(id: number): Promise<Todo> {
-  const todos = await fetchTodos();
-  const todo = findTodo(todos, id);
-
-  if (!todo) {
-    throw new Error("Todoが見つかりませんでした");
+  if (!response.ok) {
+    throw new Error("Failed to fetch todos");
   }
 
-  return todo;
-}
+  return response.json();
+};
 
-export function createTodo(newTodo: NewTodo): Promise<Todo> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const id =
-        todos.length === 0 ? 1 : Math.max(...todos.map((todo) => todo.id)) + 1;
+export const fetchTodo = async (id: number): Promise<Todo> => {
+  const response = await fetch(`http://localhost:8080/todos/${id}`);
 
-      const todo: Todo = {
-        id,
-        ...newTodo,
-      };
+  if (!response.ok) {
+    throw new Error("Failed to fetch todo");
+  }
 
-      todos.push(todo);
+  return response.json();
+};
 
-      resolve(todo);
-    }, 500);
+export const createTodo = async (input: CreateTodoRequest): Promise<Todo> => {
+  const response = await fetch("http://localhost:8080/todos", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
   });
-}
 
-export function deleteTodo(id: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const index = todos.findIndex((todo) => todo.id === id);
+  if (!response.ok) {
+    throw new Error("Failed to create todo");
+  }
 
-      if (index !== -1) {
-        todos.splice(index, 1);
-      }
+  return response.json();
+};
 
-      resolve();
-    }, 500);
+export const deleteTodo = async (id: number): Promise<void> => {
+  const response = await fetch(`http://localhost:8080/todos/${id}`, {
+    method: "DELETE",
   });
-}
 
-export function completeTodo(id: number): Promise<Todo> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const todo = todos.find((todo) => todo.id === id);
+  if (!response.ok) {
+    throw new Error("Failed to delete todo");
+  }
+};
 
-      if (!todo) {
-        reject(new Error("対象IDのTodoが見つかりません"));
-        return;
-      }
-
-      todo.status = "done";
-
-      resolve(todo);
-    }, 500);
+export const updateTodo = async (
+  id: number,
+  input: UpdateTodoRequest,
+): Promise<Todo> => {
+  const response = await fetch(`http://localhost:8080/todos/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
   });
-}
+
+  if (!response.ok) {
+    throw new Error("Failed to update todo");
+  }
+
+  return response.json();
+};
 
 // Todo[] と id を受け取り、該当するTodoを返す。
 export function findTodo(todos: Todo[], id: number): Todo | undefined {
@@ -99,15 +74,4 @@ export function findTodo(todos: Todo[], id: number): Todo | undefined {
 // statusで絞り込み
 export function getTodosByStatus(todos: Todo[], status: TodoStatus): Todo[] {
   return todos.filter((todo) => todo.status === status);
-}
-
-// Todo追加
-export function addTodo(todos: Todo[], newTodo: NewTodo): Todo[] {
-  const newId: number = todos.length + 1;
-
-  const todo = {
-    id: newId,
-    ...newTodo,
-  };
-  return [...todos, todo];
 }
