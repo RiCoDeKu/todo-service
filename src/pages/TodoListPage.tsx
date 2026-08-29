@@ -1,4 +1,4 @@
-import type { TodoFormValues } from "../schemas/todoSchema";
+import { todoFormSchema, type TodoFormValues } from "../schemas/todoSchema";
 import { Link } from "react-router-dom";
 import TodoItem from "../components/TodoItem";
 import {
@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAtomValue } from "jotai";
 import { todoFilterAtom } from "../atoms/todoFilter";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 function TodoListPage() {
   const {
@@ -19,7 +20,10 @@ function TodoListPage() {
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<TodoFormValues>();
+  } = useForm<TodoFormValues>({
+    resolver: zodResolver(todoFormSchema),
+  });
+
   const statusFilter = useAtomValue(todoFilterAtom);
 
   const queryClient = useQueryClient();
@@ -120,17 +124,7 @@ function TodoListPage() {
         {filterTodos()}
         <br />
         <form onSubmit={handleSubmit(handleAddTodo)}>
-          <input
-            {...register("title", {
-              required: "タイトルは必須です",
-              maxLength: {
-                value: 100,
-                message: "タイトルは100文字以内で入力してください",
-              },
-              validate: (value) =>
-                value.trim() !== "" || "タイトルを正しく入力してください",
-            })}
-          />
+          <input {...register("title")} />
           <button type="submit" disabled={createTodoMutation.isPending}>
             {createTodoMutation.isPending ? "追加中..." : "追加"}
           </button>
