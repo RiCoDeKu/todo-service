@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
 type Todo struct {
@@ -71,6 +73,35 @@ func main() {
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
+	})
+
+	// GET: fetch specific todo.
+	http.HandleFunc("/todos/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet{
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		idText := strings.TrimPrefix(r.URL.Path, "/todos/")
+
+		id, err := strconv.Atoi(idText)
+		if err != nil {
+			http.Error(w, "invalid todo id", http.StatusBadRequest)
+			return
+		}
+
+		for _, todo := range todos {
+			if todo.ID == id {
+				w.Header().Set("Content-Type", "application/json")
+
+				if err := json.NewEncoder(w).Encode(todo); err != nil {
+					http.Error(w, "failed to encode todo", http.StatusInternalServerError)
+				}
+				return
+			}
+		}
+
+		http.Error(w, "todo not found", http.StatusInternalServerError)
 	})
 
 	if err := http.ListenAndServe(":8080", nil); err != nil {
