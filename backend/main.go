@@ -12,8 +12,13 @@ type Todo struct {
 	Status	string	`json:"status"`
 }
 
+type CreateTodoRequest struct {
+	Title	string	`json:"title"`
+	Status	string	`json:"status"`
+}
+
 func main() {
-	fmt.Println("Started Go Server")
+	fmt.Println("Started Go Server...")
 	todos := []Todo{
 	{
 		ID:	1,
@@ -26,16 +31,45 @@ func main() {
 		Status: "todo",
 	},
 }
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Hello World!")
-	})
 
 	http.HandleFunc("/todos", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+		switch r.Method{
+		// GET Process
+		case http.MethodGet:
+			w.Header().Set("Content-Type", "application/json")
 
-		if err := json.NewEncoder(w).Encode(todos); err != nil {
-			http.Error(w, "failed to encode todos", http.StatusInternalServerError)
-			return
+			if err := json.NewEncoder(w).Encode(todos); err != nil {
+				http.Error(w, "failed to encode todos", http.StatusInternalServerError)
+				return
+			}
+
+		// POST Process
+		case http.MethodPost:
+			var req CreateTodoRequest
+
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				http.Error(w, "invalid request body", http.StatusBadRequest)
+				return
+			}
+
+			newTodo := Todo{
+				ID:		len(todos) + 1,
+				Title:	req.Title,
+				Status: req.Status,
+			}
+
+			todos = append(todos, newTodo)
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusCreated)
+
+			if err := json.NewEncoder(w).Encode(newTodo); err != nil {
+				return
+			}
+
+		// Other Process
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
 
