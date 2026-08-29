@@ -1,26 +1,33 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
+
+	"github.com/labstack/echo/v5"
 )
 
+// Type of Response / Internal Data
 type Todo struct {
 	ID		int		`json:"id"`
 	Title	string	`json:"title"`
 	Status	string	`json:"status"`
 }
 
+// for POST
 type CreateTodoRequest struct {
 	Title	string	`json:"title"`
 	Status	string	`json:"status"`
 }
 
+// for PATCH
+type UpdateTodoRequest struct {
+	Status	string	`json:"status"`
+}
+
 func main() {
-	fmt.Println("Started Go Server...")
+	e := echo.New()
+
 	todos := []Todo{
 	{
 		ID:	1,
@@ -34,77 +41,89 @@ func main() {
 	},
 }
 
-	http.HandleFunc("/todos", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method{
-		// GET Process
-		case http.MethodGet:
-			w.Header().Set("Content-Type", "application/json")
-
-			if err := json.NewEncoder(w).Encode(todos); err != nil {
-				http.Error(w, "failed to encode todos", http.StatusInternalServerError)
-				return
-			}
-
-		// POST Process
-		case http.MethodPost:
-			var req CreateTodoRequest
-
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				http.Error(w, "invalid request body", http.StatusBadRequest)
-				return
-			}
-
-			newTodo := Todo{
-				ID:		len(todos) + 1,
-				Title:	req.Title,
-				Status: req.Status,
-			}
-
-			todos = append(todos, newTodo)
-
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusCreated)
-
-			if err := json.NewEncoder(w).Encode(newTodo); err != nil {
-				return
-			}
-
-		// Other Process
-		default:
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		}
+	// GET: get todos
+	e.GET("/todos", func(c *echo.Context) error {
+		return c.JSON(http.StatusOK, todos)
 	})
 
-	// GET: fetch specific todo.
-	http.HandleFunc("/todos/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet{
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		idText := strings.TrimPrefix(r.URL.Path, "/todos/")
-
-		id, err := strconv.Atoi(idText)
+	// GET: get todo from specified todo id
+	e.GET("/todos/:id", func(c *echo.Context) error {
+		id, err := strconv.Atoi(c.Param("id"))
 		if err != nil {
-			http.Error(w, "invalid todo id", http.StatusBadRequest)
-			return
+			return c.String(http.StatusBadRequest, "invalid todo id")
 		}
 
 		for _, todo := range todos {
 			if todo.ID == id {
-				w.Header().Set("Content-Type", "application/json")
-
-				if err := json.NewEncoder(w).Encode(todo); err != nil {
-					http.Error(w, "failed to encode todo", http.StatusInternalServerError)
-				}
-				return
+				return c.JSON(http.StatusOK, todo)
 			}
 		}
 
-		http.Error(w, "todo not found", http.StatusInternalServerError)
+		return c.String(http.StatusNotFound, "todo not found")
 	})
 
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		fmt.Println(err)
+	//POST: post new todo
+	e.POST("/todos", func(c *echo.Context) error {
+		var req CreateTodoRequest
+
+		if err := c.Bind(&req); err != nil {
+			return c.String(http.StatusBadRequest, "invalid request body")
+		}
+
+		newTodo := Todo{
+			ID: len(todos) + 1,
+			Title: req.Title,
+			Status: req.Status,
+		}
+
+		todos = append(todos, newTodo)
+
+		return c.JSON(http.StatusOK, newTodo)
+	})
+	
+	//PATCH: update todo status
+	e.PATCH("/todos/:id", func(c *echo.Context) error {
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.String(http.StatusBadRequest, "invalid todo id")
+		}
+
+		var req UpdateTodoRequest
+
+		if err := c.Bind(&req); err != nil {
+			c.String(http.StatusBadRequest, "invalid request body")
+		}
+
+		for idx, todo := range(todos) {
+			if todo.ID == id {
+				todos[idx].Status = req.Status
+
+				return c.JSON(http.StatusOK, todos[idx])
+			}
+		}
+
+		return c.String(http.StatusNotFound, "todo not found")
+	})
+
+	//DELETE: delete specified todo
+	e.DELETE("/todos/:id", func(c *echo.Context) error {
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.String(http.StatusBadRequest, "invalid todo id")
+		}
+
+		for idx, todo := range todos {
+			if todo.ID == id {
+				todos = append(todos[:idx], todos[idx+1:]...)
+
+				return c.NoContent(http.StatusNoContent)
+			}
+		}
+
+		return c.String(http.StatusNotFound, "todo not found")
+	})
+
+	if err := e.Start(":8080"); err != nil {
+		e.Logger.Error("failed to start server", "error", err)
 	}
 }
