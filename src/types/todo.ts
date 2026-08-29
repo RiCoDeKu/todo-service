@@ -8,3 +8,7 @@ export type Todo = {
 };
 
 export type NewTodo = Omit<Todo, "id">;
+
+export type TodoFormValues = {
+  title: string;
+};

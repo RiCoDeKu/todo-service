@@ -1,4 +1,4 @@
-import { useState } from "react";
+import type { TodoFormValues } from "../types/todo";
 import { Link } from "react-router-dom";
 import TodoItem from "../components/TodoItem";
 import {
@@ -11,9 +11,15 @@ import TodoFilter from "../components/TodoFilter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAtomValue } from "jotai";
 import { todoFilterAtom } from "../atoms/todoFilter";
+import { useForm } from "react-hook-form";
 
 function TodoListPage() {
-  const [title, setTitle] = useState("");
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<TodoFormValues>();
   const statusFilter = useAtomValue(todoFilterAtom);
 
   const queryClient = useQueryClient();
@@ -22,7 +28,7 @@ function TodoListPage() {
     mutationFn: createTodo,
 
     onSuccess: () => {
-      setTitle("");
+      reset();
 
       queryClient.invalidateQueries({
         queryKey: ["todos"],
@@ -48,13 +54,9 @@ function TodoListPage() {
     },
   });
 
-  function handleAddTodo() {
-    if (title.trim() === "") {
-      return;
-    }
-
+  function handleAddTodo(data: TodoFormValues) {
     createTodoMutation.mutate({
-      title,
+      title: data.title,
       status: "todo",
     });
   }
@@ -117,15 +119,23 @@ function TodoListPage() {
         <TodoFilter />
         {filterTodos()}
         <br />
-        <input
-          value={title}
-          onChange={(event) => {
-            setTitle(event.target.value);
-          }}
-        />
-        <button onClick={handleAddTodo} disabled={createTodoMutation.isPending}>
-          {createTodoMutation.isPending ? "追加中..." : "追加"}
-        </button>
+        <form onSubmit={handleSubmit(handleAddTodo)}>
+          <input
+            {...register("title", {
+              required: "タイトルは必須です",
+              maxLength: {
+                value: 100,
+                message: "タイトルは100文字以内で入力してください",
+              },
+              validate: (value) =>
+                value.trim() !== "" || "タイトルを正しく入力してください",
+            })}
+          />
+          <button type="submit" disabled={createTodoMutation.isPending}>
+            {createTodoMutation.isPending ? "追加中..." : "追加"}
+          </button>
+        </form>
+        {errors.title && <p>{errors.title.message}</p>}
         {createTodoMutation.isError && <p>追加に失敗しました</p>}
         <br />
       </>
