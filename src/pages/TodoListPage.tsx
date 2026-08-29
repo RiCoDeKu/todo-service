@@ -1,4 +1,4 @@
-import type { TodoFormValues } from "../types/todo";
+import type { TodoFormValues } from "../schemas/todoSchema";
 import { Link } from "react-router-dom";
 import TodoItem from "../components/TodoItem";
 import {
@@ -23,6 +23,16 @@ function TodoListPage() {
   const statusFilter = useAtomValue(todoFilterAtom);
 
   const queryClient = useQueryClient();
+
+  const {
+    data: todos,
+    isPending,
+    error,
+  } = useQuery({
+    queryKey: ["todos"],
+    queryFn: fetchTodos,
+    staleTime: 60_000,
+  });
 
   const createTodoMutation = useMutation({
     mutationFn: createTodo,
@@ -68,16 +78,6 @@ function TodoListPage() {
   function handleCompleteTodo(id: number) {
     completeTodoMutation.mutate(id);
   }
-
-  const {
-    data: todos,
-    isPending,
-    error,
-  } = useQuery({
-    queryKey: ["todos"],
-    queryFn: fetchTodos,
-    staleTime: 60_000,
-  });
 
   function filterTodos() {
     if (!todos) {
