@@ -1,11 +1,12 @@
 import { todoFormSchema, type TodoFormValues } from "../schemas/todoSchema";
+import type { TodoStatus } from "../types/todo";
 import { Link } from "react-router-dom";
 import TodoItem from "../components/TodoItem";
 import {
   fetchTodos,
   createTodo,
   deleteTodo,
-  completeTodo,
+  updateTodo,
 } from "../services/todoService";
 import TodoFilter from "../components/TodoFilter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -59,8 +60,10 @@ function TodoListPage() {
     },
   });
 
-  const completeTodoMutation = useMutation({
-    mutationFn: completeTodo,
+  const updateTodoMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: TodoStatus }) =>
+      updateTodo(id, { status }),
+
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["todos"],
@@ -71,7 +74,6 @@ function TodoListPage() {
   function handleAddTodo(data: TodoFormValues) {
     createTodoMutation.mutate({
       title: data.title,
-      status: "todo",
     });
   }
 
@@ -79,8 +81,8 @@ function TodoListPage() {
     deleteTodoMutation.mutate(id);
   }
 
-  function handleCompleteTodo(id: number) {
-    completeTodoMutation.mutate(id);
+  function handleUpdateTodo(id: number) {
+    updateTodoMutation.mutate({ id, status: "done" });
   }
 
   function filterTodos() {
@@ -101,9 +103,9 @@ function TodoListPage() {
         key={todo.id}
         todo={todo}
         onDelete={handleDeleteTodo}
-        onComplete={handleCompleteTodo}
+        onComplete={handleUpdateTodo}
         isDisable={
-          deleteTodoMutation.isPending || completeTodoMutation.isPending
+          deleteTodoMutation.isPending || updateTodoMutation.isPending
         }
       />
     ));
