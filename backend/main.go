@@ -5,23 +5,6 @@ import (
 	"github.com/labstack/echo/v5/middleware"
 )
 
-// Todos Definition
-var todos = []Todo{
-	{
-		Id:	1,
-		Title:  "Reactを勉強する",
-		Status: "done",
-	},
-	{
-		Id:     2,
-		Title:  "Goを勉強する",
-		Status: "todo",
-	},
-}
-
-// Next Todo Id
-var nextTodoId = 3
-
 func main() {
 	// Intialize Echo
 	e := echo.New()
@@ -29,10 +12,11 @@ func main() {
 	// CORS Middleware
 	e.Use(middleware.CORS("http://localhost:5173"))
 
-	// Handler Definition
-	strictHandler := &StrictHandler{}
-	serverHandler := NewStrictHandler(strictHandler, nil)
-
+	// Handler/Service/Repository/Memory Definition
+	repo := NewInMemoryTodoRepository()
+	service := NewTodoService(repo)
+	handler := NewTodoHandler(service)
+	serverHandler := NewStrictHandler(handler, nil)
 	RegisterHandlers(e, serverHandler)
 
 	// Server Start
