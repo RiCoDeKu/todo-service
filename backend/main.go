@@ -23,6 +23,16 @@ func main() {
 	
 	defer db.Close()
 
+	// setting up redis client
+	redisClient, err := NewRedis(
+		ctx,
+		"localhost:6379",
+	)
+	if err != nil {
+		panic(err)
+	}
+	defer redisClient.Close()
+
 	// Intialize Echo
 	e := echo.New()
 
@@ -31,7 +41,7 @@ func main() {
 
 	// Handler/Service/Repository/Memory Definition
 	repo := NewPostgreSQLTodoRepository(db)
-	service := NewTodoService(repo)
+	service := NewTodoService(repo, redisClient)
 	handler := NewTodoHandler(service)
 	serverHandler := NewStrictHandler(handler, nil)
 	RegisterHandlers(e, serverHandler)
