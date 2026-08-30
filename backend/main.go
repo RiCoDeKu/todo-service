@@ -8,12 +8,12 @@ import (
 // Todos Definition
 var todos = []Todo{
 	{
-		ID:	1,
+		Id:	1,
 		Title:  "Reactを勉強する",
 		Status: "done",
 	},
 	{
-		ID:     2,
+		Id:     2,
 		Title:  "Goを勉強する",
 		Status: "todo",
 	},
@@ -28,13 +28,12 @@ func main() {
 
 	// CORS Middleware
 	e.Use(middleware.CORS("http://localhost:5173"))
-	
-	// Routing
-	e.GET("/todos", getTodos)			// GET: get todos
-	e.GET("/todos/:id", getTodo )		// GET: get todo from specified todo id
-	e.POST("/todos", createTodo)		// POST: post new todo
-	e.PATCH("/todos/:id", updateTodo)	// PATCH: update todo status
-	e.DELETE("/todos/:id", deleteTodo)	// DELETE: delete specified todo
+
+	// Handler Definition
+	strictHandler := &StrictHandler{}
+	serverHandler := NewStrictHandler(strictHandler, nil)
+
+	RegisterHandlers(e, serverHandler)
 
 	// Server Start
 	if err := e.Start(":8080"); err != nil {

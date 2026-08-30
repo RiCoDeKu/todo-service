@@ -2,25 +2,23 @@ package main
 
 import (
 	"net/http"
-	"strconv"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/labstack/echo/v5"
 )
 
-func getTodos(c *echo.Context) error {
+type Handler struct{}
+
+var _ ServerInterface = (*Handler)(nil)
+
+func (h *Handler) GetTodos(c *echo.Context) error {
 	return c.JSON(http.StatusOK, todos)
 }
 
-func getTodo(c *echo.Context) error {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "invalid todo id"})
-	}
-
+func (h *Handler) GetTodo(c *echo.Context, todoId int,) error {
 	for _, todo := range todos {
-		if todo.ID == id {
+		if todo.Id == todoId {
 			return c.JSON(http.StatusOK, todo)
 		}
 	}
@@ -28,7 +26,7 @@ func getTodo(c *echo.Context) error {
 	return c.JSON(http.StatusNotFound, ErrorResponse{Message: "todo not found"})
 }
 
-func createTodo(c *echo.Context) error {
+func (h *Handler) CreateTodo(c *echo.Context) error {
 	var req CreateTodoRequest
 
 	if err := c.Bind(&req); err != nil {
@@ -55,9 +53,9 @@ func createTodo(c *echo.Context) error {
 	}
 
 	newTodo := Todo{
-		ID: nextTodoId,
+		Id: nextTodoId,
 		Title: title,
-		Status: "todo",
+		Status: TodoStatusTodo,
 	}
 
 	nextTodoId++
@@ -67,14 +65,7 @@ func createTodo(c *echo.Context) error {
 	return c.JSON(http.StatusCreated, newTodo)
 }
 
-func updateTodo(c *echo.Context) error {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, 
-			ErrorResponse{Message: "invalid todo id"},
-		)
-	}
-
+func (h *Handler) UpdateTodo(c *echo.Context, todoId int,) error {
 	var req UpdateTodoRequest
 
 	if err := c.Bind(&req); err != nil {
@@ -83,7 +74,7 @@ func updateTodo(c *echo.Context) error {
 		)
 	}
 
-	if req.Status != "todo" && req.Status != "done" {
+	if !req.Status.Valid() {
 		return c.JSON(
 			http.StatusBadRequest,
 			ErrorResponse{
@@ -93,8 +84,8 @@ func updateTodo(c *echo.Context) error {
 	}
 
 	for idx, todo := range(todos) {
-		if todo.ID == id {
-			todos[idx].Status = req.Status
+		if todo.Id == todoId {
+			todos[idx].Status = TodoStatus(req.Status)
 
 			return c.JSON(http.StatusOK, todos[idx])
 		}
@@ -105,16 +96,9 @@ func updateTodo(c *echo.Context) error {
 	)
 }
 
-func deleteTodo(c *echo.Context) error {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, 
-			ErrorResponse{Message: "invalid todo id"},
-		)
-	}
-
+func (h *Handler) DeleteTodo(c *echo.Context, todoId int,) error {
 	for idx, todo := range todos {
-		if todo.ID == id {
+		if todo.Id == todoId {
 			todos = append(todos[:idx], todos[idx+1:]...)
 
 			return c.NoContent(http.StatusNoContent)
