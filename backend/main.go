@@ -5,6 +5,7 @@ import (
 	"github.com/labstack/echo/v5/middleware"
 )
 
+// Todos Definition
 var todos = []Todo{
 	{
 		ID:	1,
@@ -18,20 +19,24 @@ var todos = []Todo{
 	},
 }
 
+// Next Todo Id
 var nextTodoId = 3
 
 func main() {
+	// Intialize Echo
 	e := echo.New()
 
 	// CORS Middleware
 	e.Use(middleware.CORS("http://localhost:5173"))
 	
+	// Routing
 	e.GET("/todos", getTodos)			// GET: get todos
 	e.GET("/todos/:id", getTodo )		// GET: get todo from specified todo id
 	e.POST("/todos", createTodo)		// POST: post new todo
 	e.PATCH("/todos/:id", updateTodo)	// PATCH: update todo status
 	e.DELETE("/todos/:id", deleteTodo)	// DELETE: delete specified todo
 
+	// Server Start
 	if err := e.Start(":8080"); err != nil {
 		e.Logger.Error("failed to start server", "error", err)
 	}
