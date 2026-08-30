@@ -1,127 +1,111 @@
 package main
 
 import (
-	"net/http"
-	"strconv"
-	"strings"
-	"unicode/utf8"
-
-	"github.com/labstack/echo/v5"
+	"context"
+	"errors"
 )
 
-func getTodos(c *echo.Context) error {
-	return c.JSON(http.StatusOK, todos)
+type StrictHandler struct{
+	service *TodoService
 }
 
-func getTodo(c *echo.Context) error {
-	id, err := strconv.Atoi(c.Param("id"))
+func NewTodoHandler(service *TodoService) *StrictHandler {
+	return &StrictHandler{
+		service: service,
+	}
+}
+
+var _ StrictServerInterface = (*StrictHandler)(nil)
+
+func (h *StrictHandler) GetTodos(
+	ctx context.Context,
+	request GetTodosRequestObject,
+) (GetTodosResponseObject, error) {
+	todos, err := h.service.GetTodos(ctx)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "invalid todo id"})
+		return GetTodos500JSONResponse{Message: "internal server error"}, nil
 	}
 
-	for _, todo := range todos {
-		if todo.ID == id {
-			return c.JSON(http.StatusOK, todo)
-		}
-	}
-
-	return c.JSON(http.StatusNotFound, ErrorResponse{Message: "todo not found"})
+	return GetTodos200JSONResponse(todos), nil
 }
 
-func createTodo(c *echo.Context) error {
-	var req CreateTodoRequest
-
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "invalid request body"})
+func (h *StrictHandler) GetTodo(
+	ctx	context.Context,
+	request GetTodoRequestObject,
+) (GetTodoResponseObject, error) {
+	todo, err := h.service.GetTodo(ctx, request.TodoId)
+	
+	if errors.Is(err, ErrTodoNotFound) {
+		return GetTodo404JSONResponse{Message: "todo not found"}, nil
 	}
 
-	title := strings.TrimSpace(req.Title)
-	if title == "" {
-		return c.JSON(
-			http.StatusBadRequest, 
-			ErrorResponse{
-				Message: "title is required",
-			},
-		)
-	}
-
-	if utf8.RuneCountInString(title) > 100 {
-		return c.JSON(
-			http.StatusBadRequest,
-			ErrorResponse{
-				Message: "title must be 100 characters or less",
-			},
-		)
-	}
-
-	newTodo := Todo{
-		ID: nextTodoId,
-		Title: title,
-		Status: "todo",
-	}
-
-	nextTodoId++
-
-	todos = append(todos, newTodo)
-
-	return c.JSON(http.StatusCreated, newTodo)
-}
-
-func updateTodo(c *echo.Context) error {
-	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, 
-			ErrorResponse{Message: "invalid todo id"},
-		)
+		return GetTodo500JSONResponse{Message: "internal server error"}, nil
 	}
 
-	var req UpdateTodoRequest
-
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, 
-			ErrorResponse{Message: "invalid request body"},
-		)
-	}
-
-	if req.Status != "todo" && req.Status != "done" {
-		return c.JSON(
-			http.StatusBadRequest,
-			ErrorResponse{
-				Message: "status must be todo or done",
-			},
-		)
-	}
-
-	for idx, todo := range(todos) {
-		if todo.ID == id {
-			todos[idx].Status = req.Status
-
-			return c.JSON(http.StatusOK, todos[idx])
-		}
-	}
-
-	return c.JSON(http.StatusNotFound, 
-		ErrorResponse{Message: "todo not found"},
-	)
+	return GetTodo200JSONResponse(todo), nil
 }
 
-func deleteTodo(c *echo.Context) error {
-	id, err := strconv.Atoi(c.Param("id"))
+func (h *StrictHandler) CreateTodo(
+	ctx context.Context,
+	request CreateTodoRequestObject,
+) (CreateTodoResponseObject, error) {
+	if request.Body == nil {
+		return CreateTodo400JSONResponse{Message: "invalid request body"}, nil
+	}
+
+	todo, err := h.service.CreateTodo(ctx, request.Body.Title)
+	
+	if errors.Is(err, ErrInvalidTitle){
+		return CreateTodo400JSONResponse{Message: "invalid title"}, nil
+	}
+
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, 
-			ErrorResponse{Message: "invalid todo id"},
-		)
+		return CreateTodo500JSONResponse{Message: "internal server error"}, nil
 	}
 
-	for idx, todo := range todos {
-		if todo.ID == id {
-			todos = append(todos[:idx], todos[idx+1:]...)
+	return CreateTodo201JSONResponse(todo), nil
+}
 
-			return c.NoContent(http.StatusNoContent)
-		}
+func (h *StrictHandler) UpdateTodo (
+	ctx context.Context,
+	request UpdateTodoRequestObject,
+) (UpdateTodoResponseObject, error) {
+
+	if request.Body == nil {
+		return UpdateTodo400JSONResponse{Message: "invalid request body"}, nil
 	}
 
-	return c.JSON(http.StatusNotFound, 
-		ErrorResponse{Message: "todo not found"},
-	)
+	todo, err := h.service.UpdateTodo(ctx, request.TodoId, TodoStatus(request.Body.Status))
+
+	if errors.Is(err, ErrInvalidStatus) {
+		return UpdateTodo400JSONResponse{Message: "invalid status"}, nil
+	}
+
+	if errors.Is(err, ErrTodoNotFound){
+		return UpdateTodo404JSONResponse{Message: "todo not found"}, nil
+	}
+
+	if err != nil {
+		return UpdateTodo500JSONResponse{Message: "internal server error"}, nil
+	}
+
+	return UpdateTodo200JSONResponse(todo), nil
+}
+
+func (h *StrictHandler) DeleteTodo (
+	ctx context.Context,
+	request DeleteTodoRequestObject,
+) (DeleteTodoResponseObject, error ) {
+	err := h.service.DeleteTodo(ctx, request.TodoId)
+
+	if errors.Is(err, ErrTodoNotFound) {
+		return DeleteTodo404JSONResponse{Message: "todo not found"}, nil
+	}
+
+	if err != nil {
+		return DeleteTodo500JSONResponse{Message: "internal server error"}, nil
+	}
+
+	return DeleteTodo204Response{}, nil
 }

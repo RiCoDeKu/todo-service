@@ -1,37 +1,52 @@
 package main
 
 import (
+	"context"
+
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 )
 
-var todos = []Todo{
-	{
-		ID:	1,
-		Title:  "Reactを勉強する",
-		Status: "done",
-	},
-	{
-		ID:     2,
-		Title:  "Goを勉強する",
-		Status: "todo",
-	},
-}
-
-var nextTodoId = 3
-
 func main() {
+	// ctx definition
+	ctx := context.Background()
+
+	// setting up postgreSQL DB
+	db, err := NewDB(
+		ctx,
+		"postgres://app:password@localhost:5432/todo",
+	)
+
+	if err != nil {
+		panic(err)
+	}
+	
+	defer db.Close()
+
+	// setting up redis client
+	redisClient, err := NewRedis(
+		ctx,
+		"localhost:6379",
+	)
+	if err != nil {
+		panic(err)
+	}
+	defer redisClient.Close()
+
+	// Intialize Echo
 	e := echo.New()
 
 	// CORS Middleware
 	e.Use(middleware.CORS("http://localhost:5173"))
-	
-	e.GET("/todos", getTodos)			// GET: get todos
-	e.GET("/todos/:id", getTodo )		// GET: get todo from specified todo id
-	e.POST("/todos", createTodo)		// POST: post new todo
-	e.PATCH("/todos/:id", updateTodo)	// PATCH: update todo status
-	e.DELETE("/todos/:id", deleteTodo)	// DELETE: delete specified todo
 
+	// Handler/Service/Repository/Memory Definition
+	repo := NewPostgreSQLTodoRepository(db)
+	service := NewTodoService(repo, redisClient)
+	handler := NewTodoHandler(service)
+	serverHandler := NewStrictHandler(handler, nil)
+	RegisterHandlers(e, serverHandler)
+
+	// Server Start
 	if err := e.Start(":8080"); err != nil {
 		e.Logger.Error("failed to start server", "error", err)
 	}
