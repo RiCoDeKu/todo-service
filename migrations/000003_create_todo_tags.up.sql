@@ -1,0 +1,5 @@
+CREATE TABLE todo_tags (
+	todo_id	INTEGER	NOT NULL REFERENCES todos(id) ON DELETE CASCADE,
+	tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+	PRIMARY KEY (todo_id, tag_id)
+);
