@@ -2,19 +2,30 @@ package main
 
 import (
 	"context"
+	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 )
 
 func main() {
+	// read info if exists .env file
+	if err := godotenv.Load(); err != nil {
+		panic(err)
+	}
+	
 	// ctx definition
 	ctx := context.Background()
+
+	// URL Settings
+	databaseUrl := os.Getenv("DATABASE_URL")
+	redisAddr := os.Getenv("REDIS_ADDR")
 
 	// setting up postgreSQL DB
 	db, err := NewDB(
 		ctx,
-		"postgres://app:password@localhost:5432/todo",
+		databaseUrl,
 	)
 
 	if err != nil {
@@ -26,7 +37,7 @@ func main() {
 	// setting up redis client
 	redisClient, err := NewRedis(
 		ctx,
-		"localhost:6379",
+		redisAddr,
 	)
 	if err != nil {
 		panic(err)
